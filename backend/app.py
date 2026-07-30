@@ -1,3 +1,4 @@
+from flask_cors import CORS
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import (
@@ -9,6 +10,8 @@ from flask_jwt_extended import (
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
 import os
 
 
@@ -19,6 +22,7 @@ import os
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app, origins=["http://localhost:5173"])
 
 
 # --------------------------------------------------
@@ -48,6 +52,18 @@ db = SQLAlchemy(app)
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
 jwt = JWTManager(app)
+
+
+# --------------------------------------------------
+# ORDER STATUS CONFIGURATION
+# --------------------------------------------------
+
+ORDER_STATUSES = [
+    "Pending",
+    "Confirmed",
+    "Shipped",
+    "Delivered"
+]
 
 
 # --------------------------------------------------
@@ -157,13 +173,9 @@ class CartItem(db.Model):
         default=1
     )
 
-    user = db.relationship(
-        "User"
-    )
+    user = db.relationship("User")
 
-    product = db.relationship(
-        "Product"
-    )
+    product = db.relationship("Product")
 
     __table_args__ = (
         db.UniqueConstraint(
@@ -172,6 +184,99 @@ class CartItem(db.Model):
             name="unique_user_product_cart"
         ),
     )
+
+
+# --------------------------------------------------
+# ORDER MODEL
+# --------------------------------------------------
+
+class Order(db.Model):
+
+    __tablename__ = "orders"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
+
+    total_price = db.Column(
+        db.Numeric(12, 2),
+        nullable=False
+    )
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="Pending"
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    user = db.relationship("User")
+
+    items = db.relationship(
+        "OrderItem",
+        back_populates="order",
+        cascade="all, delete-orphan"
+    )
+
+
+# --------------------------------------------------
+# ORDER ITEM MODEL
+# --------------------------------------------------
+
+class OrderItem(db.Model):
+
+    __tablename__ = "order_items"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    order_id = db.Column(
+        db.Integer,
+        db.ForeignKey("orders.id"),
+        nullable=False
+    )
+
+    product_id = db.Column(
+        db.Integer,
+        db.ForeignKey("products.id"),
+        nullable=False
+    )
+
+    product_name = db.Column(
+        db.String(150),
+        nullable=False
+    )
+
+    quantity = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    price = db.Column(
+        db.Numeric(10, 2),
+        nullable=False
+    )
+
+    order = db.relationship(
+        "Order",
+        back_populates="items"
+    )
+
+    product = db.relationship("Product")
 
 
 # --------------------------------------------------
@@ -205,6 +310,40 @@ def get_current_user():
     )
 
 
+def is_admin(user):
+
+    return user and user.role == "admin"
+
+
+def order_item_to_dict(item):
+
+    return {
+        "id": item.id,
+        "product_id": item.product_id,
+        "product_name": item.product_name,
+        "quantity": item.quantity,
+        "price": float(item.price),
+        "subtotal": float(
+            item.price * item.quantity
+        )
+    }
+
+
+def order_to_dict(order):
+
+    return {
+        "id": order.id,
+        "user_id": order.user_id,
+        "total_price": float(order.total_price),
+        "status": order.status,
+        "created_at": order.created_at.isoformat(),
+        "items": [
+            order_item_to_dict(item)
+            for item in order.items
+        ]
+    }
+
+
 # --------------------------------------------------
 # HOME
 # --------------------------------------------------
@@ -224,7 +363,7 @@ def home():
 @app.route("/api/register", methods=["POST"])
 def register():
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({
@@ -240,8 +379,13 @@ def register():
             "message": "Name, email and password are required"
         }), 400
 
-    name = name.strip()
-    email = email.strip().lower()
+    name = str(name).strip()
+    email = str(email).strip().lower()
+
+    if not name:
+        return jsonify({
+            "message": "Name cannot be empty"
+        }), 400
 
     existing_user = User.query.filter_by(
         email=email
@@ -284,7 +428,7 @@ def register():
 @app.route("/api/login", methods=["POST"])
 def login():
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({
@@ -299,7 +443,7 @@ def login():
             "message": "Email and password are required"
         }), 400
 
-    email = email.strip().lower()
+    email = str(email).strip().lower()
 
     user = User.query.filter_by(
         email=email
@@ -372,7 +516,7 @@ def admin_dashboard():
             "message": "User not found"
         }), 404
 
-    if user.role != "admin":
+    if not is_admin(user):
         return jsonify({
             "message": "Admin access required"
         }), 403
@@ -404,12 +548,12 @@ def add_product():
             "message": "User not found"
         }), 404
 
-    if user.role != "admin":
+    if not is_admin(user):
         return jsonify({
             "message": "Admin access required"
         }), 403
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({
@@ -428,9 +572,10 @@ def add_product():
         }), 400
 
     try:
-        price = float(price)
+        price = Decimal(str(price))
         stock = int(stock)
-    except (ValueError, TypeError):
+
+    except (ValueError, TypeError, InvalidOperation):
         return jsonify({
             "message": "Price and stock must be valid numbers"
         }), 400
@@ -445,8 +590,15 @@ def add_product():
             "message": "Stock cannot be negative"
         }), 400
 
+    name = str(name).strip()
+
+    if not name:
+        return jsonify({
+            "message": "Product name cannot be empty"
+        }), 400
+
     new_product = Product(
-        name=name.strip(),
+        name=name,
         description=description,
         price=price,
         stock=stock,
@@ -490,7 +642,10 @@ def get_products():
 # PUBLIC
 # --------------------------------------------------
 
-@app.route("/api/products/<int:product_id>", methods=["GET"])
+@app.route(
+    "/api/products/<int:product_id>",
+    methods=["GET"]
+)
 def get_product(product_id):
 
     product = db.session.get(
@@ -513,7 +668,10 @@ def get_product(product_id):
 # ADMIN ONLY
 # --------------------------------------------------
 
-@app.route("/api/products/<int:product_id>", methods=["PUT"])
+@app.route(
+    "/api/products/<int:product_id>",
+    methods=["PUT"]
+)
 @jwt_required()
 def update_product(product_id):
 
@@ -524,7 +682,7 @@ def update_product(product_id):
             "message": "User not found"
         }), 404
 
-    if user.role != "admin":
+    if not is_admin(user):
         return jsonify({
             "message": "Admin access required"
         }), 403
@@ -539,7 +697,7 @@ def update_product(product_id):
             "message": "Product not found"
         }), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({
@@ -548,7 +706,10 @@ def update_product(product_id):
 
     if "name" in data:
 
-        if not data["name"] or not str(data["name"]).strip():
+        if (
+            not data["name"]
+            or not str(data["name"]).strip()
+        ):
             return jsonify({
                 "message": "Product name cannot be empty"
             }), 400
@@ -566,8 +727,9 @@ def update_product(product_id):
     if "price" in data:
 
         try:
-            price = float(data["price"])
-        except (ValueError, TypeError):
+            price = Decimal(str(data["price"]))
+
+        except (ValueError, TypeError, InvalidOperation):
             return jsonify({
                 "message": "Price must be a valid number"
             }), 400
@@ -583,6 +745,7 @@ def update_product(product_id):
 
         try:
             stock = int(data["stock"])
+
         except (ValueError, TypeError):
             return jsonify({
                 "message": "Stock must be a valid integer"
@@ -608,7 +771,10 @@ def update_product(product_id):
 # ADMIN ONLY
 # --------------------------------------------------
 
-@app.route("/api/products/<int:product_id>", methods=["DELETE"])
+@app.route(
+    "/api/products/<int:product_id>",
+    methods=["DELETE"]
+)
 @jwt_required()
 def delete_product(product_id):
 
@@ -619,7 +785,7 @@ def delete_product(product_id):
             "message": "User not found"
         }), 404
 
-    if user.role != "admin":
+    if not is_admin(user):
         return jsonify({
             "message": "Admin access required"
         }), 403
@@ -647,8 +813,6 @@ def delete_product(product_id):
 
 # --------------------------------------------------
 # ADD TO CART
-# JWT REQUIRED
-# POST /api/cart
 # --------------------------------------------------
 
 @app.route("/api/cart", methods=["POST"])
@@ -662,7 +826,7 @@ def add_to_cart():
             "message": "User not found"
         }), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data:
         return jsonify({
@@ -680,9 +844,13 @@ def add_to_cart():
     try:
         product_id = int(product_id)
         quantity = int(quantity)
+
     except (ValueError, TypeError):
         return jsonify({
-            "message": "Product ID and quantity must be valid integers"
+            "message": (
+                "Product ID and quantity "
+                "must be valid integers"
+            )
         }), 400
 
     if quantity <= 0:
@@ -713,12 +881,16 @@ def add_to_cart():
     if existing_item:
 
         new_quantity = (
-            existing_item.quantity + quantity
+            existing_item.quantity
+            + quantity
         )
 
         if new_quantity > product.stock:
             return jsonify({
-                "message": "Requested quantity exceeds available stock"
+                "message": (
+                    "Requested quantity exceeds "
+                    "available stock"
+                )
             }), 400
 
         existing_item.quantity = new_quantity
@@ -734,14 +906,18 @@ def add_to_cart():
                 "quantity": existing_item.quantity,
                 "price": float(product.price),
                 "subtotal": float(
-                    product.price * existing_item.quantity
+                    product.price
+                    * existing_item.quantity
                 )
             }
         }), 200
 
     if quantity > product.stock:
         return jsonify({
-            "message": "Requested quantity exceeds available stock"
+            "message": (
+                "Requested quantity exceeds "
+                "available stock"
+            )
         }), 400
 
     cart_item = CartItem(
@@ -762,7 +938,8 @@ def add_to_cart():
             "quantity": cart_item.quantity,
             "price": float(product.price),
             "subtotal": float(
-                product.price * cart_item.quantity
+                product.price
+                * cart_item.quantity
             )
         }
     }), 201
@@ -770,8 +947,6 @@ def add_to_cart():
 
 # --------------------------------------------------
 # VIEW CART
-# JWT REQUIRED
-# GET /api/cart
 # --------------------------------------------------
 
 @app.route("/api/cart", methods=["GET"])
@@ -792,15 +967,16 @@ def get_cart():
     ).scalars().all()
 
     items = []
-    total = 0.0
+
+    total = Decimal("0.00")
 
     for item in cart_items:
 
         product = item.product
 
         subtotal = (
-            float(product.price) *
-            item.quantity
+            product.price
+            * item.quantity
         )
 
         total += subtotal
@@ -809,7 +985,7 @@ def get_cart():
             "cart_item_id": item.id,
             "product": product_to_dict(product),
             "quantity": item.quantity,
-            "subtotal": round(subtotal, 2)
+            "subtotal": float(subtotal)
         })
 
     return jsonify({
@@ -818,14 +994,12 @@ def get_cart():
             item.quantity
             for item in cart_items
         ),
-        "total_price": round(total, 2)
+        "total_price": float(total)
     }), 200
 
 
 # --------------------------------------------------
-# UPDATE CART QUANTITY
-# JWT REQUIRED
-# PUT /api/cart/<cart_item_id>
+# UPDATE CART
 # --------------------------------------------------
 
 @app.route(
@@ -847,13 +1021,15 @@ def update_cart_item(cart_item_id):
         cart_item_id
     )
 
-    # Also prevents users from editing another user's cart
-    if not cart_item or cart_item.user_id != user.id:
+    if (
+        not cart_item
+        or cart_item.user_id != user.id
+    ):
         return jsonify({
             "message": "Cart item not found"
         }), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
     if not data or "quantity" not in data:
         return jsonify({
@@ -862,6 +1038,7 @@ def update_cart_item(cart_item_id):
 
     try:
         quantity = int(data["quantity"])
+
     except (ValueError, TypeError):
         return jsonify({
             "message": "Quantity must be a valid integer"
@@ -876,7 +1053,10 @@ def update_cart_item(cart_item_id):
 
     if quantity > product.stock:
         return jsonify({
-            "message": "Requested quantity exceeds available stock"
+            "message": (
+                "Requested quantity exceeds "
+                "available stock"
+            )
         }), 400
 
     cart_item.quantity = quantity
@@ -884,8 +1064,8 @@ def update_cart_item(cart_item_id):
     db.session.commit()
 
     subtotal = (
-        float(product.price) *
-        cart_item.quantity
+        product.price
+        * cart_item.quantity
     )
 
     return jsonify({
@@ -896,15 +1076,13 @@ def update_cart_item(cart_item_id):
             "product_name": product.name,
             "quantity": cart_item.quantity,
             "price": float(product.price),
-            "subtotal": round(subtotal, 2)
+            "subtotal": float(subtotal)
         }
     }), 200
 
 
 # --------------------------------------------------
 # REMOVE FROM CART
-# JWT REQUIRED
-# DELETE /api/cart/<cart_item_id>
 # --------------------------------------------------
 
 @app.route(
@@ -926,16 +1104,431 @@ def remove_cart_item(cart_item_id):
         cart_item_id
     )
 
-    if not cart_item or cart_item.user_id != user.id:
+    if (
+        not cart_item
+        or cart_item.user_id != user.id
+    ):
         return jsonify({
             "message": "Cart item not found"
         }), 404
 
     db.session.delete(cart_item)
+
     db.session.commit()
 
     return jsonify({
         "message": "Product removed from cart"
+    }), 200
+
+
+# --------------------------------------------------
+# CHECKOUT
+# --------------------------------------------------
+
+@app.route("/api/checkout", methods=["POST"])
+@jwt_required()
+def checkout():
+
+    user = get_current_user()
+
+    if not user:
+        return jsonify({
+            "message": "User not found"
+        }), 404
+
+    cart_items = db.session.execute(
+        db.select(CartItem)
+        .where(CartItem.user_id == user.id)
+        .order_by(CartItem.id)
+    ).scalars().all()
+
+    if not cart_items:
+        return jsonify({
+            "message": "Cart is empty"
+        }), 400
+
+    total_price = Decimal("0.00")
+
+    # Check every cart item before creating order
+    for cart_item in cart_items:
+
+        product = cart_item.product
+
+        if not product:
+            return jsonify({
+                "message": (
+                    "A product in your cart "
+                    "no longer exists"
+                )
+            }), 400
+
+        if cart_item.quantity <= 0:
+            return jsonify({
+                "message": "Invalid cart quantity"
+            }), 400
+
+        if cart_item.quantity > product.stock:
+            return jsonify({
+                "message": (
+                    f"Not enough stock for "
+                    f"{product.name}. "
+                    f"Available: {product.stock}"
+                )
+            }), 400
+
+        total_price += (
+            product.price
+            * cart_item.quantity
+        )
+
+    try:
+
+        new_order = Order(
+            user_id=user.id,
+            total_price=total_price,
+            status="Pending"
+        )
+
+        db.session.add(new_order)
+
+        db.session.flush()
+
+        for cart_item in cart_items:
+
+            product = cart_item.product
+
+            order_item = OrderItem(
+                order_id=new_order.id,
+                product_id=product.id,
+                product_name=product.name,
+                quantity=cart_item.quantity,
+                price=product.price
+            )
+
+            db.session.add(order_item)
+
+            product.stock -= cart_item.quantity
+
+        for cart_item in cart_items:
+            db.session.delete(cart_item)
+
+        db.session.commit()
+
+        return jsonify({
+            "message": "Order placed successfully",
+            "order": order_to_dict(new_order)
+        }), 201
+
+    except Exception:
+
+        db.session.rollback()
+
+        return jsonify({
+            "message": (
+                "Checkout failed. "
+                "No changes were saved."
+            )
+        }), 500
+
+
+# --------------------------------------------------
+# USER ORDER HISTORY
+# --------------------------------------------------
+
+@app.route("/api/orders", methods=["GET"])
+@jwt_required()
+def get_user_orders():
+
+    user = get_current_user()
+
+    if not user:
+        return jsonify({
+            "message": "User not found"
+        }), 404
+
+    orders = db.session.execute(
+        db.select(Order)
+        .where(Order.user_id == user.id)
+        .order_by(Order.created_at.desc())
+    ).scalars().all()
+
+    return jsonify({
+        "count": len(orders),
+        "orders": [
+            order_to_dict(order)
+            for order in orders
+        ]
+    }), 200
+
+
+# --------------------------------------------------
+# GET ONE USER ORDER
+# --------------------------------------------------
+
+@app.route(
+    "/api/orders/<int:order_id>",
+    methods=["GET"]
+)
+@jwt_required()
+def get_user_order(order_id):
+
+    user = get_current_user()
+
+    if not user:
+        return jsonify({
+            "message": "User not found"
+        }), 404
+
+    order = db.session.get(
+        Order,
+        order_id
+    )
+
+    if (
+        not order
+        or order.user_id != user.id
+    ):
+        return jsonify({
+            "message": "Order not found"
+        }), 404
+
+    return jsonify({
+        "order": order_to_dict(order)
+    }), 200
+
+
+# --------------------------------------------------
+# STEP 13
+# TRACK ORDER
+# USER ONLY
+# --------------------------------------------------
+
+@app.route(
+    "/api/orders/<int:order_id>/track",
+    methods=["GET"]
+)
+@jwt_required()
+def track_order(order_id):
+
+    user = get_current_user()
+
+    if not user:
+        return jsonify({
+            "message": "User not found"
+        }), 404
+
+    order = db.session.get(
+        Order,
+        order_id
+    )
+
+    # Prevent one customer from tracking
+    # another customer's order.
+    if (
+        not order
+        or order.user_id != user.id
+    ):
+        return jsonify({
+            "message": "Order not found"
+        }), 404
+
+    try:
+        current_index = ORDER_STATUSES.index(
+            order.status
+        )
+
+    except ValueError:
+        return jsonify({
+            "message": "Order has an invalid status"
+        }), 500
+
+    tracking = []
+
+    for index, status in enumerate(
+        ORDER_STATUSES
+    ):
+
+        tracking.append({
+            "status": status,
+            "completed": index <= current_index,
+            "current": index == current_index
+        })
+
+    return jsonify({
+        "order_id": order.id,
+        "current_status": order.status,
+        "created_at": order.created_at.isoformat(),
+        "tracking": tracking
+    }), 200
+
+
+# --------------------------------------------------
+# ADMIN - GET ALL ORDERS
+# --------------------------------------------------
+
+@app.route(
+    "/api/admin/orders",
+    methods=["GET"]
+)
+@jwt_required()
+def get_all_orders():
+
+    user = get_current_user()
+
+    if not user:
+        return jsonify({
+            "message": "User not found"
+        }), 404
+
+    if not is_admin(user):
+        return jsonify({
+            "message": "Admin access required"
+        }), 403
+
+    orders = db.session.execute(
+        db.select(Order)
+        .order_by(Order.created_at.desc())
+    ).scalars().all()
+
+    result = []
+
+    for order in orders:
+
+        order_data = order_to_dict(order)
+
+        order_data["customer"] = {
+            "id": order.user.id,
+            "name": order.user.name,
+            "email": order.user.email
+        }
+
+        result.append(order_data)
+
+    return jsonify({
+        "count": len(result),
+        "orders": result
+    }), 200
+
+
+# --------------------------------------------------
+# STEP 13
+# ADMIN - UPDATE ORDER STATUS
+# CONTROLLED PROGRESSION
+# --------------------------------------------------
+
+@app.route(
+    "/api/admin/orders/<int:order_id>/status",
+    methods=["PUT"]
+)
+@jwt_required()
+def update_order_status(order_id):
+
+    user = get_current_user()
+
+    if not user:
+        return jsonify({
+            "message": "User not found"
+        }), 404
+
+    if not is_admin(user):
+        return jsonify({
+            "message": "Admin access required"
+        }), 403
+
+    order = db.session.get(
+        Order,
+        order_id
+    )
+
+    if not order:
+        return jsonify({
+            "message": "Order not found"
+        }), 404
+
+    data = request.get_json(silent=True)
+
+    if not data or not data.get("status"):
+        return jsonify({
+            "message": "Status is required"
+        }), 400
+
+    requested_status = str(
+        data["status"]
+    ).strip().title()
+
+    if requested_status not in ORDER_STATUSES:
+        return jsonify({
+            "message": "Invalid order status",
+            "allowed_statuses": ORDER_STATUSES
+        }), 400
+
+    try:
+        current_index = ORDER_STATUSES.index(
+            order.status
+        )
+
+    except ValueError:
+        return jsonify({
+            "message": "Order has an invalid current status"
+        }), 500
+
+    requested_index = ORDER_STATUSES.index(
+        requested_status
+    )
+
+    # Same status
+    if requested_index == current_index:
+
+        return jsonify({
+            "message": (
+                f"Order is already "
+                f"{order.status}"
+            ),
+            "order": order_to_dict(order)
+        }), 200
+
+    # Prevent moving backwards
+    if requested_index < current_index:
+
+        return jsonify({
+            "message": (
+                "Order status cannot move backwards"
+            ),
+            "current_status": order.status,
+            "requested_status": requested_status
+        }), 400
+
+    # Prevent skipping stages
+    if requested_index > current_index + 1:
+
+        next_status = ORDER_STATUSES[
+            current_index + 1
+        ]
+
+        return jsonify({
+            "message": (
+                "Order status cannot skip stages"
+            ),
+            "current_status": order.status,
+            "next_status": next_status
+        }), 400
+
+    # Delivered is final
+    if order.status == "Delivered":
+
+        return jsonify({
+            "message": (
+                "Delivered order cannot be changed"
+            )
+        }), 400
+
+    order.status = requested_status
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Order status updated successfully",
+        "order": order_to_dict(order)
     }), 200
 
 
