@@ -5,6 +5,7 @@ import {
   useParams,
 } from "react-router-dom";
 import api from "../services/api";
+import productImages from "../utils/productImages";
 
 function ProductDetails() {
   const { id } = useParams();
@@ -22,10 +23,7 @@ function ProductDetails() {
   useEffect(() => {
     const loadProduct = async () => {
       try {
-        const response = await api.get(
-          `/products/${id}`
-        );
-
+        const response = await api.get(`/products/${id}`);
         setProduct(response.data.product);
       } catch (err) {
         setError(
@@ -66,13 +64,10 @@ function ProductDetails() {
     setAdding(true);
 
     try {
-      const response = await api.post(
-        "/cart",
-        {
-          product_id: product.id,
-          quantity: Number(quantity),
-        }
-      );
+      const response = await api.post("/cart", {
+        product_id: product.id,
+        quantity: Number(quantity),
+      });
 
       setMessage(response.data.message);
     } catch (err) {
@@ -96,9 +91,7 @@ function ProductDetails() {
   if (error && !product) {
     return (
       <div className="page">
-        <p className="error-message">
-          {error}
-        </p>
+        <p className="error-message">{error}</p>
 
         <Link to="/" className="primary-btn">
           Back to Products
@@ -119,7 +112,14 @@ function ProductDetails() {
 
       <div className="details-card">
         <div className="details-image">
-          {product.name}
+          <img
+            src={
+              productImages[product.name] ||
+              "https://via.placeholder.com/500x400?text=No+Image"
+            }
+            alt={product.name}
+            className="product-detail-image"
+          />
         </div>
 
         <div className="product-info">

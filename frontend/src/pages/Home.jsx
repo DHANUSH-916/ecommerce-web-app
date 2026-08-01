@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
+import productImages from "../utils/productImages";
+import hero from "../assets/hero.png";
 
 function Home() {
   const [products, setProducts] = useState([]);
@@ -11,6 +13,7 @@ function Home() {
     const loadProducts = async () => {
       try {
         const response = await api.get("/products");
+        console.log(response.data.products); // Temporary debugging
         setProducts(response.data.products);
       } catch (err) {
         console.error(err);
@@ -26,21 +29,22 @@ function Home() {
   return (
     <div className="page">
       <section className="hero">
-        <div>
-          <p className="hero-label">
-            Welcome to ShopZone
-          </p>
+        <div className="hero-content">
+          <p className="hero-label">Welcome to ShopZone</p>
 
           <h1>Find products you'll love.</h1>
 
           <p>
-            Browse our latest products and shop from
-            anywhere.
+            Browse our latest products and shop from anywhere.
           </p>
 
           <a href="#products" className="primary-btn">
             Shop Now
           </a>
+        </div>
+
+        <div className="hero-image">
+          <img src={hero} alt="ShopZone Hero" />
         </div>
       </section>
 
@@ -54,7 +58,7 @@ function Home() {
 
         {loading && <p>Loading products...</p>}
 
-        {error && <p>{error}</p>}
+        {error && <p className="error-message">{error}</p>}
 
         {!loading && !error && products.length === 0 && (
           <p>No products available.</p>
@@ -62,13 +66,15 @@ function Home() {
 
         <div className="product-grid">
           {products.map((product) => (
-            <div
-              className="product-card"
-              key={product.id}
-            >
-              <div className="product-placeholder">
-                {product.name}
-              </div>
+            <div className="product-card" key={product.id}>
+              <img
+                src={
+                  productImages[product.name] ||
+                  "https://via.placeholder.com/400x300?text=No+Image"
+                }
+                alt={product.name}
+                className="product-image"
+              />
 
               <h3>{product.name}</h3>
 
@@ -77,10 +83,7 @@ function Home() {
               </p>
 
               <p className="price">
-                ₹
-                {Number(product.price).toLocaleString(
-                  "en-IN"
-                )}
+                ₹{Number(product.price).toLocaleString("en-IN")}
               </p>
 
               <p>Stock: {product.stock}</p>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import productImages from "../utils/productImages";
 
 const statusOrder = [
   "Pending",
@@ -456,7 +457,14 @@ function AdminDashboard() {
                 key={product.id}
               >
                 <div className="admin-product-image">
-                  {product.name}
+                  <img
+                    src={
+                     productImages[product.name] ||
+                     "https://via.placeholder.com/400x300?text=No+Image"
+                 }
+                  alt={product.name}
+                  className="admin-product-image-img"
+                  />
                 </div>
 
                 <p className="eyebrow">
