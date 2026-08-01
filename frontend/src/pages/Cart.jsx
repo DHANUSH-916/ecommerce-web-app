@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import productImages from "../utils/productImages";
 
 function Cart() {
   const navigate = useNavigate();
@@ -203,8 +204,15 @@ function Cart() {
                 key={item.cart_item_id}
               >
                 <div className="cart-product-image">
-                  {item.product.name}
-                </div>
+  <img
+    src={
+      productImages[item.product.name] ||
+      "https://via.placeholder.com/150x150?text=No+Image"
+    }
+    alt={item.product.name}
+    className="cart-image"
+  />
+</div>
 
                 <div className="cart-product-info">
                   <p className="eyebrow">

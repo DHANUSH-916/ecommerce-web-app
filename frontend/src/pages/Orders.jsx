@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import productImages from "../utils/productImages";
 
 function Orders() {
   const navigate = useNavigate();
@@ -149,29 +150,30 @@ function Orders() {
                   <div className="order-products">
                     {order.items.map((item) => (
                       <div
-                        className="order-product"
-                        key={item.id}
-                      >
-                        <div>
-                          <strong>
-                            {item.product_name}
-                          </strong>
+  className="order-product"
+  key={item.id}
+>
+  <div className="order-product-image">
+    <img
+      src={
+        productImages[item.product_name] ||
+        "https://via.placeholder.com/120x120?text=No+Image"
+      }
+      alt={item.product_name}
+      className="order-image"
+    />
+  </div>
 
-                          <p>
-                            Quantity:{" "}
-                            {item.quantity}
-                          </p>
-                        </div>
+  <div className="order-product-details">
+    <strong>{item.product_name}</strong>
 
-                        <strong>
-                          ₹
-                          {Number(
-                            item.subtotal
-                          ).toLocaleString(
-                            "en-IN"
-                          )}
-                        </strong>
-                      </div>
+    <p>Quantity: {item.quantity}</p>
+
+    <strong>
+      ₹{Number(item.subtotal).toLocaleString("en-IN")}
+    </strong>
+  </div>
+</div>
                     ))}
                   </div>
                 )}

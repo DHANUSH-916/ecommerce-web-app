@@ -105,7 +105,18 @@ function TrackOrder() {
         </p>
       </div>
 
-      <div className="tracking-card tracking-list">
+      <div className="tracking-card">
+  <div className="tracking-header">
+    <h2>Delivery Progress</h2>
+    <p>
+      Current Status:
+      <span className="tracking-current-status">
+        {tracking.current_status}
+      </span>
+    </p>
+  </div>
+
+  <div className="tracking-list">
         {tracking.tracking.map(
           (step, index) => (
             <div
@@ -139,8 +150,9 @@ function TrackOrder() {
               </div>
             </div>
           )
-        )}
+                )}
       </div>
+    </div>
 
       {tracking.created_at && (
         <p className="order-created">

@@ -1,52 +1,37 @@
 import { useEffect, useState } from "react";
-import {
-  NavLink,
-  useNavigate,
-} from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 function Navbar() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
-
-    return savedUser
-      ? JSON.parse(savedUser)
-      : null;
+    return savedUser ? JSON.parse(savedUser) : null;
   });
+
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const updateUser = () => {
-      const savedUser =
-        localStorage.getItem("user");
-
-      setUser(
-        savedUser
-          ? JSON.parse(savedUser)
-          : null
-      );
+      const savedUser = localStorage.getItem("user");
+      setUser(savedUser ? JSON.parse(savedUser) : null);
     };
 
-    window.addEventListener(
-      "authChanged",
-      updateUser
-    );
+    const updateCart = () => {
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      setCartCount(cart.length);
+    };
 
-    window.addEventListener(
-      "storage",
-      updateUser
-    );
+    updateCart();
+
+    window.addEventListener("authChanged", updateUser);
+    window.addEventListener("storage", updateUser);
+    window.addEventListener("cartUpdated", updateCart);
 
     return () => {
-      window.removeEventListener(
-        "authChanged",
-        updateUser
-      );
-
-      window.removeEventListener(
-        "storage",
-        updateUser
-      );
+      window.removeEventListener("authChanged", updateUser);
+      window.removeEventListener("storage", updateUser);
+      window.removeEventListener("cartUpdated", updateCart);
     };
   }, []);
 
@@ -56,9 +41,7 @@ function Navbar() {
 
     setUser(null);
 
-    window.dispatchEvent(
-      new Event("authChanged")
-    );
+    window.dispatchEvent(new Event("authChanged"));
 
     navigate("/");
   };
@@ -66,18 +49,21 @@ function Navbar() {
   return (
     <nav className="navbar">
       <NavLink to="/" className="brand">
-        ShopZone
+        🛍️ ShopZone
       </NavLink>
 
       <div className="nav-links">
-        <NavLink to="/">
-          Home
-        </NavLink>
+        <NavLink to="/">Home</NavLink>
 
         {user && user.role === "user" && (
           <>
-            <NavLink to="/cart">
-              Cart
+            <NavLink to="/cart" className="cart-link">
+              🛒 Cart
+              {cartCount > 0 && (
+                <span className="cart-badge">
+                  {cartCount}
+                </span>
+              )}
             </NavLink>
 
             <NavLink to="/orders">
@@ -105,7 +91,7 @@ function Navbar() {
         ) : (
           <>
             <span className="user-name">
-              Hi, {user.name}
+              👋 Hi, {user.name}
             </span>
 
             <button
