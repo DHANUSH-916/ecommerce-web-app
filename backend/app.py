@@ -33,12 +33,19 @@ db_user = os.getenv("DB_USER")
 db_password = os.getenv("DB_PASSWORD")
 db_host = os.getenv("DB_HOST")
 db_name = os.getenv("DB_NAME")
+db_port = os.getenv("DB_PORT")
 
 encoded_password = quote_plus(db_password)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
-    f"mysql+pymysql://{db_user}:{encoded_password}@{db_host}/{db_name}"
+    f"mysql+pymysql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
 )
+
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "connect_args": {
+        "ssl": {}
+    }
+}
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
