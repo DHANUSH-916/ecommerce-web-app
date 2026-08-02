@@ -1341,9 +1341,14 @@ a {
 }
 /* ---------- APP BACKGROUND ---------- */
 
-body {
-  background: #f4f7fc;
-  color: #222;
+body{
+    margin:0;
+    font-family:"Poppins",sans-serif;
+    background:
+        radial-gradient(circle at top right,#dbeafe 0%,transparent 30%),
+        radial-gradient(circle at bottom left,#e0f2fe 0%,transparent 35%),
+        linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%);
+    color:#1f2937;
 }
 
 /* ---------- PAGE ---------- */
@@ -1501,4 +1506,62 @@ textarea {
   border: 1px solid #dbe5f1;
   background: white;
   font-size: 15px;
+}
+.hero{
+    background:linear-gradient(135deg,#2563eb,#60a5fa);
+    color:white;
+    border-radius:28px;
+    padding:60px;
+    box-shadow:0 20px 50px rgba(37,99,235,.25);
+}
+.product-card{
+    background:#fff;
+    border:none;
+    border-radius:22px;
+    overflow:hidden;
+    box-shadow:0 15px 35px rgba(0,0,0,.08);
+    transition:.35s;
+}
+
+.product-card:hover{
+    transform:translateY(-10px);
+    box-shadow:0 25px 50px rgba(37,99,235,.22);
+}
+.navbar{
+    background:rgba(255,255,255,.82);
+    backdrop-filter:blur(18px);
+    border-bottom:1px solid rgba(255,255,255,.4);
+    box-shadow:0 8px 25px rgba(0,0,0,.05);
+}.primary-btn{
+    background:linear-gradient(135deg,#2563eb,#3b82f6);
+    border:none;
+    border-radius:14px;
+    transition:.3s;
+}
+
+.primary-btn:hover{
+    transform:translateY(-3px);
+    box-shadow:0 15px 30px rgba(37,99,235,.3);
+}
+.cart-item,
+.order-card,
+.details-card,
+.cart-summary,
+.empty-card,
+.dashboard-card{
+    border:none;
+    border-radius:20px;
+    box-shadow:0 15px 35px rgba(0,0,0,.08);
+}
+.search-input{
+    background:white;
+    border:2px solid #dbeafe;
+    border-radius:15px;
+    padding:15px 22px;
+    box-shadow:0 8px 20px rgba(0,0,0,.05);
+}
+
+.search-input:focus{
+    border-color:#2563eb;
+    box-shadow:0 0 0 5px rgba(37,99,235,.15);
 }
