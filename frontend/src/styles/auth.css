@@ -248,3 +248,30 @@ padding:35px;
 .auth-right{
     display:flex !important;
 }
+/* Terms Checkbox */
+
+.terms-checkbox{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    margin-top:15px;
+    cursor:pointer;
+    font-size:15px;
+    color:#374151;
+}
+
+.terms-checkbox input{
+    width:18px;
+    height:18px;
+    margin-top:3px;
+}
+
+/* Better Image */
+
+.auth-image{
+    width:100%;
+    max-width:420px;
+    display:block;
+    margin:40px auto 0;
+    object-fit:contain;
+}

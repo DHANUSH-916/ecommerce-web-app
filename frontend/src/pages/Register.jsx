@@ -102,15 +102,9 @@ const strength = getPasswordStrength(formData.password);
           <img
   src={shoppingImage}
   alt="Shopping"
-  style={{
-    width: "350px",
-    height: "350px",
-    border: "3px solid red",
-    background: "white",
-    display: "block",
-    marginTop: "30px"
-  }}
+  className="auth-image"
 />
+
 
         </div>
 
@@ -250,25 +244,19 @@ const strength = getPasswordStrength(formData.password);
   </p>
 )}
 
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginTop: "10px",
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={acceptedTerms}
-                  onChange={() =>
-                    setAcceptedTerms(!acceptedTerms)
-                  }
-                />
+              <label className="terms-checkbox">
+  <input
+    type="checkbox"
+    checked={acceptedTerms}
+    onChange={() =>
+      setAcceptedTerms(!acceptedTerms)
+    }
+  />
 
-                I agree to the Terms & Conditions
-              </label>
+  <span>
+    I agree to the Terms & Conditions
+  </span>
+</label>
 
               <button
                 className="auth-btn"
