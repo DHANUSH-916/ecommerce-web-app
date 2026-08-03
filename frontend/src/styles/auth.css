@@ -227,3 +227,10 @@ padding:35px;
     font-weight:600;
     margin-bottom:15px;
 }
+.auth-image {
+    width: 100%;
+    max-width: 420px;
+    display: block;
+    margin: 30px auto 0;
+    object-fit: contain;
+}
