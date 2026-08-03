@@ -234,3 +234,17 @@ padding:35px;
     margin: 30px auto 0;
     object-fit: contain;
 }
+.auth-container{
+    display:grid !important;
+    grid-template-columns:1fr 480px !important;
+}
+
+.auth-left{
+    display:flex !important;
+    background:#2563eb !important;
+    min-height:700px;
+}
+
+.auth-right{
+    display:flex !important;
+}
