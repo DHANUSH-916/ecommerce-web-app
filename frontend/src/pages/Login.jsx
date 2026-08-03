@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import api from "../services/api";
+import "../styles/auth.css";
+import shoppingImage from "../assets/auth-shopping.png";
 
 function Login() {
   const navigate = useNavigate();
@@ -10,6 +13,8 @@ function Login() {
     password: "",
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -27,10 +32,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await api.post(
-        "/login",
-        formData
-      );
+      const response = await api.post("/login", formData);
 
       localStorage.setItem(
         "token",
@@ -42,9 +44,11 @@ function Login() {
         JSON.stringify(response.data.user)
       );
 
-      window.dispatchEvent(
-        new Event("authChanged")
-      );
+      if (rememberMe) {
+        localStorage.setItem("rememberEmail", formData.email);
+      }
+
+      window.dispatchEvent(new Event("authChanged"));
 
       if (response.data.user.role === "admin") {
         navigate("/admin");
@@ -53,8 +57,7 @@ function Login() {
       }
     } catch (err) {
       setError(
-        err.response?.data?.message ||
-          "Login failed"
+        err.response?.data?.message || "Login failed"
       );
     } finally {
       setLoading(false);
@@ -62,56 +65,159 @@ function Login() {
   };
 
   return (
-    <div className="form-page">
-      <div className="form-card">
-        <h1>Login</h1>
+    <div className="auth-page">
+      <div className="auth-container">
 
-        <p>Sign in to continue shopping.</p>
+        <div className="auth-left">
 
-        {error && (
-          <p className="error-message">
-            {error}
+          <h1>ShopZone</h1>
+
+          <p>
+            Shop smarter with thousands of premium
+            products, secure payments, and lightning-fast
+            delivery.
           </p>
-        )}
 
-        <form onSubmit={handleSubmit}>
-          <label>Email</label>
+          <div className="auth-features">
+            <div className="auth-feature">
+              🛒 Premium Products
+            </div>
 
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="Enter your email"
-            required
+            <div className="auth-feature">
+              🚚 Fast Delivery
+            </div>
+
+            <div className="auth-feature">
+              🔒 Secure Payments
+            </div>
+
+            <div className="auth-feature">
+              ⭐ Trusted by Thousands
+            </div>
+          </div>
+
+          <img
+            src={shoppingImage}
+            alt="Shopping"
+            className="auth-image"
           />
 
-          <label>Password</label>
+        </div>
 
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="Enter your password"
-            required
-          />
+        <div className="auth-right">
 
-          <button
-            type="submit"
-            className="primary-btn full-width"
-            disabled={loading}
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+          <div className="auth-card">
 
-        <p className="form-footer">
-          Don't have an account?{" "}
-          <Link to="/register">
-            Create Account
-          </Link>
-        </p>
+            <h2>Welcome Back 👋</h2>
+
+            <p>
+              Login to continue your shopping journey.
+            </p>
+
+            {error && (
+              <p className="error-message">
+                {error}
+              </p>
+            )}
+
+            <form
+              className="auth-form"
+              onSubmit={handleSubmit}
+            >
+
+              <label>Email Address</label>
+
+              <input
+                type="email"
+                name="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+
+              <label>Password</label>
+
+              <div className="password-field">
+
+                <input
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  name="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() =>
+                    setShowPassword(
+                      !showPassword
+                    )
+                  }
+                >
+                  {showPassword ? (
+                    <FaEyeSlash />
+                  ) : (
+                    <FaEye />
+                  )}
+                </button>
+
+              </div>
+
+              <div className="auth-options">
+
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={() =>
+                      setRememberMe(
+                        !rememberMe
+                      )
+                    }
+                  />
+
+                  Remember Me
+                </label>
+
+                <Link to="#">
+                  Forgot Password?
+                </Link>
+
+              </div>
+
+              <button
+                className="auth-btn"
+                disabled={loading}
+              >
+                {loading
+                  ? "Logging In..."
+                  : "Login"}
+              </button>
+
+            </form>
+
+            <div className="auth-footer">
+
+              Don't have an account?{" "}
+
+              <Link to="/register">
+                Create Account
+              </Link>
+
+            </div>
+
+          </div>
+
+        </div>
+
       </div>
     </div>
   );

@@ -1,0 +1,229 @@
+/* ---------- Background ---------- */
+
+.auth-page{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px;
+    background:
+        radial-gradient(circle at top right,#60a5fa 0%,transparent 35%),
+        radial-gradient(circle at bottom left,#3b82f6 0%,transparent 35%),
+        linear-gradient(135deg,#eff6ff,#dbeafe);
+}
+
+/* ---------- Container ---------- */
+
+.auth-container{
+    width:100%;
+    max-width:1200px;
+    display:grid;
+    grid-template-columns:1fr 480px;
+    overflow:hidden;
+    border-radius:28px;
+    background:white;
+    box-shadow:0 30px 80px rgba(37,99,235,.18);
+}
+
+/* ---------- Left Side ---------- */
+
+.auth-left{
+    padding:70px;
+    color:white;
+    background:linear-gradient(135deg,#2563eb,#3b82f6);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+}
+
+.auth-left h1{
+    font-size:54px;
+    margin-bottom:20px;
+}
+
+.auth-left p{
+    font-size:18px;
+    line-height:1.8;
+    opacity:.95;
+}
+
+.auth-features{
+    margin-top:40px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+
+.auth-feature{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-size:17px;
+}
+
+.auth-image{
+    width:100%;
+    margin-top:40px;
+}
+
+/* ---------- Right ---------- */
+
+.auth-right{
+    padding:60px;
+    display:flex;
+    align-items:center;
+}
+
+.auth-card{
+    width:100%;
+}
+
+.auth-card h2{
+    font-size:38px;
+    margin-bottom:10px;
+}
+
+.auth-card p{
+    color:#6b7280;
+    margin-bottom:30px;
+}
+
+/* ---------- Form ---------- */
+
+.auth-form{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+
+.auth-form label{
+    font-weight:600;
+}
+
+.auth-form input{
+    width:100%;
+    padding:15px;
+    border-radius:12px;
+    border:1px solid #dbe5f1;
+    background:#f8fbff;
+    transition:.3s;
+}
+
+.auth-form input:focus{
+    border-color:#2563eb;
+    box-shadow:0 0 0 4px rgba(37,99,235,.12);
+}
+
+/* ---------- Password ---------- */
+
+.password-field{
+    position:relative;
+}
+
+.password-field input{
+    padding-right:55px;
+}
+
+.password-toggle{
+    position:absolute;
+    right:15px;
+    top:50%;
+    transform:translateY(-50%);
+    border:none;
+    background:none;
+    cursor:pointer;
+    color:#64748b;
+    font-size:20px;
+}
+
+/* ---------- Options ---------- */
+
+.auth-options{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:5px;
+}
+
+.auth-options label{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    font-size:15px;
+}
+
+.auth-options a{
+    color:#2563eb;
+    font-weight:600;
+}
+
+/* ---------- Button ---------- */
+
+.auth-btn{
+    margin-top:15px;
+    padding:15px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(135deg,#2563eb,#3b82f6);
+    color:white;
+    font-size:17px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.3s;
+}
+
+.auth-btn:hover{
+    transform:translateY(-3px);
+    box-shadow:0 15px 35px rgba(37,99,235,.25);
+}
+
+/* ---------- Footer ---------- */
+
+.auth-footer{
+    text-align:center;
+    margin-top:25px;
+}
+
+.auth-footer a{
+    color:#2563eb;
+    font-weight:700;
+}
+
+/* ---------- Responsive ---------- */
+
+@media(max-width:900px){
+
+.auth-container{
+grid-template-columns:1fr;
+}
+
+.auth-left{
+display:none;
+}
+
+.auth-right{
+padding:35px;
+}
+
+}
+/* Password Strength */
+
+.strength-container{
+    width:100%;
+    height:8px;
+    background:#e5e7eb;
+    border-radius:20px;
+    overflow:hidden;
+    margin:10px 0;
+}
+
+.strength-bar{
+    height:100%;
+    transition:0.3s ease;
+}
+
+.strength-text{
+    font-size:14px;
+    font-weight:600;
+    margin-bottom:15px;
+}
