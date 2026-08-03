@@ -99,14 +99,7 @@ function Login() {
           <img
   src={shoppingImage}
   alt="Shopping"
-  style={{
-    width: "350px",
-    height: "350px",
-    border: "3px solid red",
-    background: "white",
-    display: "block",
-    marginTop: "30px"
-  }}
+  className="auth-image"
 />
 
         </div>
