@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import api from "../services/api";
 import "../styles/auth.css";
-import shoppingImage from "../assets/auth-shopping.png";
+import shoppingImage from "../assets/auth-shopping.jpg";
 
 function Register() {
   const navigate = useNavigate();
